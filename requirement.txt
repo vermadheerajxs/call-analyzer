@@ -1,4 +1,4 @@
-pip install dotenv psycopg2 requests faster_whisperpython-dotenv
+dotenv
 psycopg2-binary
 requests
 faster-whisper

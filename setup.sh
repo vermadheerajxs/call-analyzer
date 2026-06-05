@@ -1,33 +1,46 @@
-# setup.ps1
-Write-Host "Starting system setup for Windows"
+#!/usr/bin/env bash
 
-# Check for admin rights
-$isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+echo "Starting system setup for Windows"
 
-if (-not $isAdmin) {
-    Write-Host "Please run this script as Administrator"
+# Check for Administrator privileges
+net session >/dev/null 2>&1
+if [ $? -ne 0 ]; then
+    echo "Please run Git Bash as Administrator"
     exit 1
-}
+fi
 
-# Install Chocolatey if not present
-if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
-    Write-Host "Installing Chocolatey"
-    Set-ExecutionPolicy Bypass -Scope Process -Force
-    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
-    iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-}
+# Check if Chocolatey is installed
+if ! command -v choco >/dev/null 2>&1; then
+    echo "Installing Chocolatey"
 
-# Install packages
-Write-Host "Installing Python, FFmpeg, and Ollama"
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "
+        Set-ExecutionPolicy Bypass -Scope Process -Force;
+        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12;
+        iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+    "
+
+    if [ $? -ne 0 ]; then
+        echo "Chocolatey installation failed"
+        exit 1
+    fi
+fi
+
+echo "Installing Python, FFmpeg, and Ollama"
+
 choco install -y python ffmpeg ollama
 
-# Refresh environment
-$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+if [ $? -ne 0 ]; then
+    echo "Package installation failed"
+    exit 1
+fi
 
-# Verify installations
-Write-Host "`nVerifying installations:"
+echo ""
+echo "Verifying installations"
+
 python --version
-ffmpeg -version
+ffmpeg -version | head -n 1
 ollama --version
 
-Write-Host "`nSetup completed!"
+echo ""
+echo "Setup completed"
+echo "Please restart the application!"
