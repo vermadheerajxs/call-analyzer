@@ -10,7 +10,7 @@ import requests
 import ensure_runtime
 from ensure_runtime import ensure_ollama_model
 from knowledge_rag import get_retriever
-from logger import log_line
+from logger import log_line, save_full_transcript
 from models import whisper_model
 from paths import load_project_env
 
@@ -257,10 +257,11 @@ def _detect_language_and_task(path):
         return "en", _resolve_whisper_task("en")
 
 
-def transcribe(path):
+def transcribe(path, job_id: str | None = None):
     """
     High-accuracy phone-call transcription via faster-whisper.
     Returns timestamped English (or source-language) transcript text.
+    Full transcript is saved under logs/transcripts/ when LOG_FULL_TRANSCRIPT=true.
     """
     start = time.time()
 
@@ -277,10 +278,22 @@ def transcribe(path):
 
         lines, count = _collect_segments(segments)
         transcript = "\n".join(lines)
-        preview = transcript.replace("\n", " ")[:500]
         detected_lang = getattr(info, "language", language)
 
-        log_line(f"TRANSCRIPTION segments={count} text=\"{preview}\"")
+        save_full_transcript(
+            transcript,
+            job_id=job_id,
+            src_lang=str(detected_lang or ""),
+            task=str(task or ""),
+            segments=count,
+        )
+
+        # Short pointer in the daily summary log (full text is in transcripts/)
+        preview = transcript.replace("\n", " ")[:200]
+        log_line(
+            f"TRANSCRIPTION segments={count} chars={len(transcript)} "
+            f"preview=\"{preview}\""
+        )
         log_line(
             f"TRANSCRIBE_OK time={time.time() - start:.2f}s "
             f"src_lang={detected_lang} task={task}"
@@ -457,7 +470,7 @@ def warm_ollama():
             f"Ollama model setup failed for '{OLLAMA_LOCAL_MODEL}': {e}"
         ) from e
 
-def process(url):
+def process(url, job_id: str | None = None):
     """
     Full pipeline: download audio, transcribe, analyze,
     and ensure temporary file cleanup.
@@ -465,10 +478,10 @@ def process(url):
     path = None
 
     try:
-        log_line(f"PROCESS_START url={url}")
+        log_line(f"PROCESS_START url={url} job_id={job_id or ''}")
 
         path = download_audio(url)
-        text = transcribe(path)
+        text = transcribe(path, job_id=job_id)
 
         if not text.strip():
             result = {

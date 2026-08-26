@@ -217,7 +217,7 @@ def load_whisper_model():
 
     load_project_env()
 
-    model_name = os.getenv("WHISPER_MODEL", "small").strip() or "small"
+    model_name = os.getenv("WHISPER_MODEL", "distil-large-v3").strip() or "distil-large-v3"
     device_pref = os.getenv("WHISPER_DEVICE", "auto").strip().lower() or "auto"
     compute_pref = os.getenv("WHISPER_COMPUTE_TYPE", "").strip()
 

@@ -98,7 +98,7 @@ while True:
 
             try:
                 full_url = build_full_url(url)
-                result = process(full_url)
+                result = process(full_url, job_id=str(job_id))
                 update_result(job_id, result)
                 duration = time.time() - job_start
 
