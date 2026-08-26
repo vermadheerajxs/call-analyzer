@@ -1,3 +1,9 @@
+"""
+Postgres access for CallLog jobs.
+
+fetch_jobs: pending-only by default, or all recordings if PROCESS_ALL_RECORDINGS=true.
+update_result: writes AI summary / disposition / rating.
+"""
 import os
 from datetime import datetime, timezone
 

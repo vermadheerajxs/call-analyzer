@@ -1,3 +1,8 @@
+"""
+Call processing pipeline: download audio → Whisper STT → knowledge context → Ollama JSON.
+
+Produces ai_summary, ai_disposition, call_rating for CallLog updates.
+"""
 import os
 import json
 import re

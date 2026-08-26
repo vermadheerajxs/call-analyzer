@@ -1,3 +1,9 @@
+"""
+Logging helpers.
+
+- log_line → daily summary under logs/
+- save_full_transcript → full text under logs/transcripts/ (LOG_FULL_TRANSCRIPT)
+"""
 import os
 from datetime import datetime, timezone
 from pathlib import Path

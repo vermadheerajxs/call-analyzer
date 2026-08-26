@@ -1,3 +1,9 @@
+"""
+Call Analyzer worker entrypoint.
+
+Startup: load .env → Whisper (once) → knowledge index (once) → warm Ollama → poll DB forever.
+Run from repo root:  python src/main.py
+"""
 import os
 import sys
 import time
