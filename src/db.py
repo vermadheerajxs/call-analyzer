@@ -1,13 +1,12 @@
 import os
-import psycopg2
-from dotenv import load_dotenv
 from datetime import datetime, timezone
 
+import psycopg2
 
-# Load database credentials from environment variables
-load_dotenv()
+from paths import load_project_env
 
-# Database connection configuration
+load_project_env()
+
 DB_CONFIG = {
     "host": os.getenv("DB_HOST"),
     "dbname": os.getenv("DB_NAME"),
@@ -17,56 +16,83 @@ DB_CONFIG = {
 }
 
 
+def process_all_recordings() -> bool:
+    """
+    PROCESS_ALL_RECORDINGS=true → every row with a recording URL (re-analyze).
+    false/unset → only unprocessed rows (aiSummary IS NULL).
+    """
+    return (os.getenv("PROCESS_ALL_RECORDINGS") or "false").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
+
+
 def get_conn():
-    """
-    Creates and returns a new PostgreSQL database connection.
-    """
     return psycopg2.connect(**DB_CONFIG)
 
 
 def fetch_jobs(limit):
     """
-    Fetches pending call records that have not yet been analyzed.
-    Limits the number of rows returned per batch.
+    Fetch call recordings to analyze.
+    Default: pending only (aiSummary IS NULL).
+    If PROCESS_ALL_RECORDINGS=true: all rows with a non-empty recordingUrl.
     """
     conn = get_conn()
     cur = conn.cursor()
 
-    cur.execute("""
-        SELECT "id", "recordingUrl"
-        FROM "CallLog"
-        --WHERE "aiSummary" IS NULL
-        LIMIT %s
-    """, (limit,))
+    if process_all_recordings():
+        cur.execute(
+            """
+            SELECT "id", "recordingUrl"
+            FROM "CallLog"
+            WHERE "recordingUrl" IS NOT NULL
+              AND "recordingUrl" <> ''
+            LIMIT %s
+            """,
+            (limit,),
+        )
+    else:
+        cur.execute(
+            """
+            SELECT "id", "recordingUrl"
+            FROM "CallLog"
+            WHERE "aiSummary" IS NULL
+              AND "recordingUrl" IS NOT NULL
+              AND "recordingUrl" <> ''
+            LIMIT %s
+            """,
+            (limit,),
+        )
 
     rows = cur.fetchall()
-
     cur.close()
     conn.close()
     return rows
 
 
 def update_result(job_id, r):
-    """
-    Updates analysis results for a processed call record.
-    """
     conn = get_conn()
     cur = conn.cursor()
 
-    cur.execute("""
+    cur.execute(
+        """
         UPDATE "CallLog"
         SET "aiSummary"=%s,
             "aiDisposition"=%s,
             "aiCallRating"=%s,
             "updatedAt"=%s
         WHERE "id"=%s
-    """, (
-        r["ai_summary"],
-        r["ai_disposition"],
-        r["call_rating"],
-        datetime.now(timezone.utc),
-        job_id
-    ))
+        """,
+        (
+            r["ai_summary"],
+            r["ai_disposition"],
+            r["call_rating"],
+            datetime.now(timezone.utc),
+            job_id,
+        ),
+    )
 
     conn.commit()
     cur.close()

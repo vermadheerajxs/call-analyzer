@@ -2,3 +2,7 @@
 logs
 __pycache__
 *.pyc
+venv/
+.venv/
+.whisper_cache/
+.knowledge_index/
