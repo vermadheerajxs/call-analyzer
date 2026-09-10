@@ -8,48 +8,58 @@ No OpenAI. No HF token required for normal use.
 
 ---
 
-## Get started (3 steps)
+## One-command setup (after `git clone`)
 
-### 1) Install once
+From the **repo root**:
 
-**Windows (PowerShell):**
+### Windows CMD
+```bat
+setup.cmd
+```
+
+### Windows PowerShell
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\setup.ps1
 ```
 
-**Git Bash / Linux / macOS:**
+### Git Bash / Linux / macOS
 ```bash
 bash setup.sh
 ```
 
-This installs Python deps, creates `venv`, copies `.env.example` → `.env` if needed, and tries to pull the Ollama model.
+That installs everything required:
 
-### 2) Edit `.env`
+1. Python / FFmpeg / Ollama (when possible)
+2. `venv` + Python packages
+3. `.env` from `.env.example` (if missing)
+4. Local knowledge index
+5. Ollama model pull
 
-Fill in at least:
+### Then edit `.env` once
 
-```env
-DB_HOST=...
-DB_NAME=...
-DB_USER=...
-DB_PASS=...
-DB_PORT=5432
-CLOUD_BASE_URL=https://your-bucket.s3.amazonaws.com
-```
+Set `DB_*` and `CLOUD_BASE_URL`.
 
-Defaults already set for Whisper, Ollama, knowledge, and logging. See **Config cheatsheet** below.
-
-### 3) Run
+### Then start the worker
 
 ```powershell
-.\venv\Scripts\Activate.ps1
-python .\src\main.py
+.\venv\Scripts\python.exe .\src\main.py
 ```
 
 Linux/macOS:
 ```bash
-source venv/bin/activate
-python src/main.py
+venv/bin/python src/main.py
+```
+
+---
+
+## Summary
+
+```text
+git clone <repo-url>
+cd call-analyzer
+setup.cmd                 # or setup.ps1 / bash setup.sh
+# edit .env
+venv\Scripts\python.exe src\main.py
 ```
 
 First run may **download Whisper weights** (can take several minutes).  
@@ -58,8 +68,6 @@ If it sits forever on “downloads weights…”, press `Ctrl+C` and temporarily
 ```env
 WHISPER_MODEL=small
 ```
-
-You already may have `small` cached; switch back to `distil-large-v3` later on a better network/GPU machine.
 
 ---
 
@@ -121,8 +129,6 @@ python scripts/test_knowledge_retrieval.py
 python -m unittest tests.test_knowledge -v
 ```
 
-Edit a `.md` file → rebuild index → restart worker (or let startup rebuild if hash changed).
-
 ---
 
 ## Logs
@@ -137,15 +143,15 @@ Edit a `.md` file → rebuild index → restart worker (or let startup rebuild i
 ## Project layout
 
 ```
-setup.ps1 / setup.sh     → one-time install
-.env.example             → config template
-src/main.py              → worker loop
-src/analyzer.py          → download / STT / analyze
-src/knowledge_rag.py     → local retrieval
-src/db.py                → Postgres fetch/update
-src/ensure_runtime.py    → auto-download Whisper + Ollama
-knowledge/               → business docs
-scripts/                 → build/test knowledge index
+setup.cmd / setup.ps1 / setup.sh   → one-command install
+.env.example                       → config template
+src/main.py                        → worker (python src/main.py)
+src/analyzer.py                    → download / STT / analyze
+src/knowledge_rag.py               → local retrieval
+src/db.py                          → Postgres fetch/update
+src/ensure_runtime.py              → auto-download Whisper + Ollama
+knowledge/                         → business docs
+scripts/                           → build/test knowledge index
 ```
 
 ---
@@ -155,9 +161,8 @@ scripts/                 → build/test knowledge index
 | Symptom | Fix |
 |---------|-----|
 | Stuck on Whisper download | `Ctrl+C`, set `WHISPER_MODEL=small`, restart |
-| `model '…' not found` (Ollama) | `ollama pull llama3.1:8b` or let startup auto-pull |
+| `model '…' not found` (Ollama) | `ollama pull llama3.1:8b` or re-run setup |
 | No jobs | Check DB; with `PROCESS_ALL_RECORDINGS=false` only NULL summaries are picked |
 | Relative recording paths fail | Set `CLOUD_BASE_URL` |
 | Knowledge missing | `python scripts/build_knowledge_index.py` |
-
-That’s enough to get a newcomer from clone → running worker.
+| `venv missing` | Run `setup.cmd` / `setup.ps1` / `bash setup.sh` first |
